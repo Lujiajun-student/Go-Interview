@@ -51,3 +51,117 @@ s := buf.String()
 ```
 
 5. `strings.Builder`。对`bytes.Buffer`进行改进，能够更高效地进行拼接。
+
+# 7. defer的执行顺序和使用场景
+
+defer的执行顺序和调用顺序相反。作用是将声明defer的函数延迟执行，直到函数正常结束或者异常结束，就会执行defer的函数。
+
+defer通常被用于处理成对的操作，如开启连接和关闭连接、加锁和释放锁等。
+
+通过defer能够保证资源在任何情况下都会被释放。
+
+如果在defer中修改了返回的结果，如果函数声明时指定了返回的结果名，那么defer的修改会影响到返回结果，但如果没有指定返回的结果名，在return时会创建临时变量来存储返回结果，最终返回的是这个临时变量，defer的修改不会对返回结果有效。
+
+# 8. rune类型
+
+Go语言有两种字符类型，第一种是byte型，表示ASCII的字符，每个字符占用一个字节。但这里的字符表示的是英文字符，日文、中文等字符占用更多的字节。因此为了表示UTF-8字符，需要使用rune类型。rune表示的是int32类型。比如`len()`方法对`你好`字符，会计算出占用了6个长度。但如果先将字符转换为rune类型，然后计算`len()`，就会得到正确的字符长度2。
+
+# 9. tag
+
+Tag表示结构体的标签，为结构体成员提供属性。比如添加json表示属性名在json序列化或者反序列化时的名称，db表示数据库字段名，form表示前端的数据字段名等，方便进行结构体到数据的映射。
+
+# 10. `%v`、`%+v`和`%#v`的区别
+
+`%v`一般用于输出格式不明确的值。例如复合类型或用`any`声明的类型。
+
+如果只关心值本身，使用`%v`可以打印值本身，不包含字段名和类型名。
+
+如果需要打印值和类型，就要使用`%+v`。
+
+如果要打印字面量形式，包含完整包路径、类型名和字段名，就要使用`%#v`。
+
+```go
+type User struct {
+    Name string
+    Age  int
+}
+
+u := User{"Alice", 30}
+
+fmt.Printf("%v\n", u) // {Alice 30}
+
+fmt.Printf("%+v\n", u) // {Name:Alice Age:30}
+
+fmt.Printf("%#v\n", u) // main.User{Name:"Alice", Age:30}
+```
+
+# 11. struct{}
+
+struct是Go的关键字，用来声明结构体类型。
+
+而`struct{}`是一个类型，也就是没有任何字段的结构体类型。常用于channel的信号量。
+
+```go
+done := make(chan struct{})
+
+go func() {
+    fmt.Println("工作完成")
+    done <- struct{}{} // 发送信号
+}()
+
+<-done // 等待信号
+```
+
+使用`struct{}`的原因是`struct{}`本身不会占用空间。
+
+而`struct{}{}`则是创建了空结构体实例。空结构体实例也不会占用内存。
+
+但存在一个特点，如果两个空结构体实例没有发生逃逸，那么这两个空结构体实例是不一样的。但如果发生了逃逸，那么所有在堆上的空结构体实例都会指向`Runtime.zerobase`，所有空结构体实例的地址一样。
+
+# 12. Go语言执行顺序
+
+Go程序的执行顺序如下：
+
+```
+import -> const -> var -> init() -> main()
+```
+
+每个包首先加载import的类，然后初始化包作用域的常量，再初始化包作用域的变量，然后再执行包的`init()`函数，最后再执行`main()`函数。
+
+其中，init函数会从上到下按顺序执行。
+
+# 13. interface{}比较规则
+
+```go
+var a, b interface{}
+```
+
+这里如果两个`interface{}`的动态类型和动态值都相等，那么interface值就相等。只要类型或者动态值有一个不同，就不相等。
+
+```go
+a = 42
+b = 42
+fmt.Println(a == b) // true，类型相同(int)，值相同(42)
+
+a = 42
+b = "42"
+fmt.Println(a == b) // false，类型不同
+
+a = nil
+b = nil
+fmt.Println(a == b) // true
+```
+
+如果interface的动态类型为slice, map或者func，这些类型本身不可比较，运行时会panic。
+
+# 14. nil比较
+
+两个nil之间可能会不相等。
+
+interface底层是二元组。
+
+```go
+interface = (type, value)
+```
+
+只有type和value同时为nil，接口才等于nil。
