@@ -162,6 +162,7 @@ SELECT * FROM users WHERE id = 1 or name = 'Anne';
 如果name不属于索引，那么就需要进行全盘扫描。
 
 6. 范围查询之后的字段无法使用索引。
+6. 数据量小，查索引回表代价大。
 
 # 14. MySQL查询缓存
 
